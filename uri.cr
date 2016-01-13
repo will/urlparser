@@ -9,7 +9,7 @@ class Parser
   # https://url.spec.whatwg.org/
   def initialize(input)
     @url = URL.new
-    @input = input.strip
+    @input = input.strip.to_unsafe
     @state = :scheme_start
     @buffer = String::Builder.new
     @at_flag = false
@@ -18,16 +18,16 @@ class Parser
   end
 
   def c
-    begin
-      @input[@ptr]
-    rescue IndexError
-      '\0'
-    end
+    #begin
+    @input[@ptr].chr
+    #rescue IndexError
+    #  '\0'
+    #end
   end
 
   def run
     while @state
-      #p ({@ptr, @state, c})
+   #   p ({@ptr, @state, c})
       case @state
       when :scheme_start
         state_scheme_start
@@ -75,7 +75,7 @@ class Parser
       @url.scheme = @buffer.to_s
       reset_buffer
       # todo file and other special cases
-      if @input[@ptr + 1] == '/'
+      if @input[@ptr + 1].chr == '/'
         @state = :path_or_authority
         @ptr += 1
       else
