@@ -19,7 +19,7 @@ class Parser
 
   def c
     #begin
-    @input[@ptr].chr
+    @input[@ptr]
     #rescue IndexError
     #  '\0'
     #end
@@ -59,23 +59,27 @@ class Parser
   end
 
   def state_scheme_start
-    if c.alpha?
+    if alpha?
       @state = :scheme
-      @buffer << c.downcase
+      @buffer << c.chr.downcase
     else
       @state = :no_scheme
       @ptr += 1
     end
   end
 
+  def alpha?
+    ('a'.ord <= c && c <= 'z'.ord) ||
+      ('A'.ord <= c && c <= 'Z'.ord)
+  end
   def state_scheme
-    if c.alpha? || c == '-' || c == '.' || c == '+'
-      @buffer << c
-    elsif c == ':'
+    if alpha? || c == '-'.ord || c == '.'.ord || c == '+'.ord
+      @buffer << c.chr
+    elsif c == ':'.ord
       @url.scheme = @buffer.to_s
       reset_buffer
       # todo file and other special cases
-      if @input[@ptr + 1].chr == '/'
+      if @input[@ptr + 1] == '/'.ord
         @state = :path_or_authority
         @ptr += 1
       else
@@ -90,7 +94,7 @@ class Parser
   end
 
   def state_path_or_authority
-    if c == '/'
+    if c == '/'.ord
       @state = :authority
     else
       @state = :path
@@ -98,24 +102,24 @@ class Parser
   end
 
   def state_authority
-    if c == '@'
+    if c == '@'.ord
       # todo
-    elsif c == '\0' || c == '/' || c == '?' || c == '#' || (special_scheme? && c == '\\')
+    elsif c == '\0'.ord || c == '/'.ord || c == '?'.ord || c == '#'.ord || (special_scheme? && c == '\\'.ord)
       @ptr -= @buffer.bytesize + 1
       reset_buffer
       @state = :host
     else
-      @buffer << c
+      @buffer << c.chr
     end
   end
 
   def state_host
-    if c == ':' && @bracket_flag == false
+    if c == ':'.ord && @bracket_flag == false
       # todo if url is special and buffer empty fail
       url.host = @buffer.to_s
       reset_buffer
       @state = :port
-    elsif c == '\0' || c == '/' || c == '?' || c == '#' || (special_scheme? && c == '\\')
+    elsif c == '\0'.ord || c == '/'.ord || c == '?'.ord || c == '#'.ord || (special_scheme? && c == '\\'.ord)
       @ptr -= 1
       # todo if url is special and buffer empty fail
       # todo host parsing buffer
@@ -123,9 +127,9 @@ class Parser
       reset_buffer
       @state = :path
     else
-      @bracket_flag = true if c == '['
-      @bracket_flag = false if c == ']'
-      @buffer << c
+      @bracket_flag = true if c == '['.ord
+      @bracket_flag = false if c == ']'.ord
+      @buffer << c.chr
     end
   end
 end
