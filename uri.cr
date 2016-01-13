@@ -28,6 +28,10 @@ class Parser
       state_scheme_start
     when :scheme
       state_scheme
+    when :path_or_authority
+      state_path_or_authority
+    when :authority
+      state_authority
     else
       return
     end
@@ -68,6 +72,22 @@ class Parser
     else
       @state = :no_scheme
       @ptr = 0
+    end
+  end
+
+  def state_path_or_authority
+    if current == '/'
+      @state = :authority
+    else
+      @state = :path
+    end
+  end
+
+  def state_authority
+    if current == '@'
+      # todo
+      # elsif
+
     end
   end
 end
