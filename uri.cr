@@ -27,7 +27,7 @@ class Parser
 
   def run
     while @state
-      p ({@ptr, @state, c})
+      #p ({@ptr, @state, c})
       case @state
       when :scheme_start
         state_scheme_start
@@ -130,6 +130,19 @@ class Parser
   end
 end
 
+require "benchmark"
+require "uri"
+
 par = Parser.new("http://bitfission.com")
 par.run
-p par.url
+puts [par.url.scheme, par.url.host]
+
+uri = URI.parse("http://bitfission.com")
+puts [uri.scheme, uri.host]
+
+
+
+Benchmark.ips do |x|
+  x.report("new") { Parser.new("http://bitfission.com").run }
+  x.report("old") { URI.parse("http://bitfission.com") }
+end
