@@ -1,5 +1,5 @@
 class URL
-  property scheme, path
+  property scheme, path, host
   property non_relative_flag
 end
 
@@ -12,43 +12,56 @@ class Parser
     @input = input.strip
     @state = :scheme_start
     @buffer = String::Builder.new
-    @at_flag = nil
-    @bracket_flag = nil
+    @at_flag = false
+    @bracket_flag = false
     @ptr = 0
   end
 
-  def current
-    @input[@ptr]
+  def c
+    begin
+      @input[@ptr]
+    rescue IndexError
+      '\0'
+    end
   end
 
   def run
-    p ({@ptr, @state})
-    case @state
-    when :scheme_start
-      state_scheme_start
-    when :scheme
-      state_scheme
-    when :path_or_authority
-      state_path_or_authority
-    when :authority
-      state_authority
-    else
-      return
+    while @state
+      p ({@ptr, @state, c})
+      case @state
+      when :scheme_start
+        state_scheme_start
+      when :scheme
+        state_scheme
+      when :path_or_authority
+        state_path_or_authority
+      when :authority
+        state_authority
+      when :host
+        state_host
+      else
+        return
+      end
+      @ptr += 1
     end
-    @ptr += 1
-    run
   end
 
-  def read_and_reset_buffer
-    val = @buffer.to_s
+  def reset_buffer
     @buffer = String::Builder.new
-    val
+  end
+
+  def eos?
+    c == '\0'
+  end
+
+  def special_scheme?
+    %w(ftp file gopher http https ws wss).includes? url.scheme
   end
 
   def state_scheme_start
-    if current.alpha?
+    if c.alpha?
       @state = :scheme
-      @buffer << current.downcase
+      @buffer << c.downcase
     else
       @state = :no_scheme
       @ptr += 1
@@ -56,10 +69,11 @@ class Parser
   end
 
   def state_scheme
-    if current.alpha? || current == '-' || current == '.' || current == '+'
-      @buffer << current
-    elsif current == ':'
-      @url.scheme = read_and_reset_buffer
+    if c.alpha? || c == '-' || c == '.' || c == '+'
+      @buffer << c
+    elsif c == ':'
+      @url.scheme = @buffer.to_s
+      reset_buffer
       # todo file and other special cases
       if @input[@ptr + 1] == '/'
         @state = :path_or_authority
@@ -76,7 +90,7 @@ class Parser
   end
 
   def state_path_or_authority
-    if current == '/'
+    if c == '/'
       @state = :authority
     else
       @state = :path
@@ -84,10 +98,34 @@ class Parser
   end
 
   def state_authority
-    if current == '@'
+    if c == '@'
       # todo
-      # elsif
+    elsif c == '\0' || c == '/' || c == '?' || c == '#' || (special_scheme? && c == '\\')
+      @ptr -= @buffer.bytesize + 1
+      reset_buffer
+      @state = :host
+    else
+      @buffer << c
+    end
+  end
 
+  def state_host
+    if c == ':' && @bracket_flag == false
+      # todo if url is special and buffer empty fail
+      url.host = @buffer.to_s
+      reset_buffer
+      @state = :port
+    elsif c == '\0' || c == '/' || c == '?' || c == '#' || (special_scheme? && c == '\\')
+      @ptr -= 1
+      # todo if url is special and buffer empty fail
+      # todo host parsing buffer
+      @url.host = @buffer.to_s
+      reset_buffer
+      @state = :path
+    else
+      @bracket_flag = true if c == '['
+      @bracket_flag = false if c == ']'
+      @buffer << c
     end
   end
 end
