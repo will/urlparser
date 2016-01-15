@@ -8,6 +8,10 @@ class Parser
 
   SPECIAL_SCHEME = Set{"ftp", "file", "gopher", "http", "https", "ws", "wss"}
 
+  macro cor(method)
+    {{method}}
+  end
+
   # https://url.spec.whatwg.org/
   def initialize(input)
     @url = URL.new
@@ -36,7 +40,7 @@ class Parser
 
   def state_scheme_start
     if alpha?
-      state_scheme
+      cor state_scheme
     else
       # @state = :no_scheme
     end
